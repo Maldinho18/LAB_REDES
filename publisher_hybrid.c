@@ -72,8 +72,9 @@ int main(int argc, char *argv[]) {
                     ack_buf[n] = '\0';
                     LOG_INFO("Received: %s", ack_buf);
                     char cmd[32], ack_seq_str[32];
-                    if (split3(ack_buf, cmd, ack_seq_str, (char*)"", 
-                               sizeof(cmd), sizeof(ack_seq_str), 1) >= 2) {
+                    char ack_extra[8];
+                    if (split3(ack_buf, cmd, ack_seq_str, ack_extra,
+                               sizeof(cmd), sizeof(ack_seq_str), sizeof(ack_extra)) >= 2) {
                         if (strcmp(cmd, "ACKPUB") == 0) {
                             uint32_t ack_seq = atol(ack_seq_str);
                             if (ack_seq == seq && ack_seq != (uint32_t)drop_ack_seq) {

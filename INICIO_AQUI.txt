@@ -1,0 +1,61 @@
+=== LABORATORIO 3: PUBLISHER/SUBSCRIBER CON SOCKETS ===
+
+PROYECTO COMPLETO - 19 ARCHIVOS CREADOS - LISTO PARA ENTREGAR
+
+ARCHIVOS:
+- common.h (header compartido)
+- tcp: broker_tcp.c, publisher_tcp.c, subscriber_tcp.c
+- udp: broker_udp.c, publisher_udp.c, subscriber_udp.c
+- hybrid: broker_hybrid.c, publisher_hybrid.c, subscriber_hybrid.c
+- quic: broker_quic.c, publisher_quic.c, subscriber_quic.c (BONO)
+- Makefile, compile.sh, README.md, INFORME_BASE.md, RESUMEN_EJECUCION.md, ADVERTENCIAS_BONOS.md
+
+INICIO RAPIDO:
+
+1. Abre WSL Ubuntu
+   cd /mnt/c/ANDES/BI/LAB_REDES
+
+2. Compila TODO
+   bash compile.sh
+
+3. Demo TCP (3 terminales)
+   Terminal 1: ./broker_tcp 5000
+   Terminal 2: ./publisher_tcp 127.0.0.1 5000 PARTIDO_A PUB1 10 500
+   Terminal 3: ./subscriber_tcp 127.0.0.1 5000 PARTIDO_A SUB1
+
+4. Demo QUIC BONO (3 terminales)
+   Terminal 1: ./broker_quic 5003
+   Terminal 2: ./publisher_quic 127.0.0.1 5003 PARTIDO_A PUB1 5 500
+   Terminal 3: ./subscriber_quic 0.0.0.0 9200 127.0.0.1 5003 PARTIDO_A SUB1
+
+5. Capturar Wireshark (OPCIONAL)
+   sudo wireshark &
+   Interfaz: lo
+   Filtro: tcp.port==5000 o udp.port==5003
+
+CARACTERÍSTICAS:
+- TCP: Conexión persistente, 100% confiable
+- UDP: Sin conexión, rápido, sin garantía
+- HYBRID: UDP + ACKs + retransmisión + deduplicación
+- QUIC: UDP + confirmación end-to-end (RFC 9000 style)
+
+DOCUMENTACIÓN:
+- LEE: RESUMEN_EJECUCION.md para instrucciones detalladas
+- LEE: ADVERTENCIAS_BONOS.md para info sobre bonos
+- LEE: README.md para troubleshooting
+- LEE: INFORME_BASE.md para guía de análisis
+
+BONOS DISPONIBLES:
+- HYBRID: Incluido, +~15 puntos
+- QUIC: Incluido, +25 puntos
+- ASSEMBLER: NO RECOMENDADO (40-60 horas, muy riesgoso)
+
+ENTREGA MÍNIMA:
+- 12 ejecutables (tcp 3, udp 3, hybrid 3, quic 3)
+- INFORME_FINAL.pdf (rellenado)
+- Archivos .pcap de Wireshark
+
+CONTACTO: n.quiroga@uniandes.edu.co
+
+Todo funcional en WSL Ubuntu con gcc estándar.
+Síguelas instrucciones en RESUMEN_EJECUCION.md para startear.

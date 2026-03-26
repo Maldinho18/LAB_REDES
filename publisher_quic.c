@@ -1,11 +1,11 @@
 #include "common.h"
 
-#define RETRY_TIMEOUT_MS 2000
-#define MAX_RETRIES 3
+#define RETRY_TIMEOUT_MS 3000
+#define MAX_RETRIES 5
 
 int main(int argc, char *argv[]) {
     const char *host = DEFAULT_HOST;
-    int port = HYBRID_PORT;
+    int port = QUIC_PORT;
     const char *topic = "PARTIDO_A";
     const char *pub_id = "PUB_1";
     int num_msgs = 10;
@@ -21,10 +21,10 @@ int main(int argc, char *argv[]) {
     const char *drop_ack_env = getenv("DROP_ACK_SEQ");
     int drop_ack_seq = drop_ack_env ? atoi(drop_ack_env) : -1;
     
-    LOG_INFO("=== PUBLISHER HYBRID STARTED ===");
-    LOG_INFO("Publisher ID: %s | Topic: %s | Messages: %d", pub_id, topic, num_msgs);
+    LOG_INFO("=== PUBLISHER QUIC STARTED ===");
+    LOG_INFO("Publisher ID: %s | Topic: %s", pub_id, topic);
     if (drop_ack_seq >= 0) {
-        LOG_WARN("SIMULATING LOSS: Will ignore ACKPUB for sequence %d", drop_ack_seq);
+        LOG_WARN("SIMULATING LOSS: DROP_ACK_SEQ=%d", drop_ack_seq);
     }
     
     int sock = make_udp_client_socket();
@@ -36,15 +36,15 @@ int main(int argc, char *argv[]) {
     LOG_INFO("Target: %s:%d", host, port);
     
     const char *events[] = {
-        "Gol de equipo A al minuto 12",
-        "Cambio: jugador 10 entra por jugador 20",
-        "Tarjeta amarilla al número 5",
-        "Gol de equipo B al minuto 35",
-        "Cambio: jugador 8 entra por jugador 15",
-        "Tarjeta roja directa al número 12",
-        "Gol de equipo A al minuto 67",
-        "Cambio: portero entra",
-        "Gol de equipo B al minuto 78",
+        "Gol de equipo A",
+        "Cambio: jugador 10 entra",
+        "Tarjeta amarilla #5",
+        "Gol de equipo B",
+        "Cambio: jugador 8 entra",
+        "Tarjeta roja #12",
+        "Gol de equipo A",
+        "Cambio portero",
+        "Gol de equipo B",
         "Fin del partido"
     };
     
@@ -54,8 +54,9 @@ int main(int argc, char *argv[]) {
         snprintf(msg, sizeof(msg), "DATA|%u|%s|[%s] %s", seq, topic, pub_id, events[i]);
         int acked = 0;
         int retries = 0;
+        
         while (!acked && retries < MAX_RETRIES) {
-            LOG_INFO("Sending message %d (seq=%u), attempt %d/%d", 
+            LOG_INFO("Send message %d (seq=%u) attempt %d/%d", 
                      i + 1, seq, retries + 1, MAX_RETRIES);
             if (sendto(sock, msg, strlen(msg) + 1, 0,
                        (struct sockaddr *)&broker_addr, sizeof(broker_addr)) < 0) {
@@ -63,44 +64,50 @@ int main(int argc, char *argv[]) {
                 break;
             }
             if (wait_for_readable(sock, RETRY_TIMEOUT_MS) > 0) {
-                char ack_buf[64];
+                char ack_buf[80];
                 struct sockaddr_in resp_addr;
                 socklen_t addr_len = sizeof(resp_addr);
                 int n = recvfrom(sock, ack_buf, sizeof(ack_buf) - 1, 0,
                                 (struct sockaddr *)&resp_addr, &addr_len);
                 if (n > 0) {
                     ack_buf[n] = '\0';
-                    LOG_INFO("Received: %s", ack_buf);
-                    char cmd[32], ack_seq_str[32];
-                    if (split3(ack_buf, cmd, ack_seq_str, (char*)"", 
-                               sizeof(cmd), sizeof(ack_seq_str), 1) >= 2) {
+                    LOG_INFO("Ack: %s", ack_buf);
+                    char cmd[32], ack_seq_str[32], status_str[32];
+                    if (split4(ack_buf, cmd, ack_seq_str, status_str, (char*)"",
+                               sizeof(cmd), sizeof(ack_seq_str), sizeof(status_str), 1) >= 2) {
                         if (strcmp(cmd, "ACKPUB") == 0) {
                             uint32_t ack_seq = atol(ack_seq_str);
                             if (ack_seq == seq && ack_seq != (uint32_t)drop_ack_seq) {
-                                LOG_INFO("ACK confirmed for seq=%u", seq);
-                                acked = 1;
+                                int status = atoi(status_str);
+                                if (status == 1) {
+                                    LOG_INFO("ACK CONFIRMED (all subs) seq=%u", seq);
+                                    acked = 1;
+                                } else if (status == 0) {
+                                    LOG_INFO("ACK received (broker) seq=%u, wait subs", seq);
+                                    acked = 1;
+                                }
                             } else if (ack_seq == (uint32_t)drop_ack_seq) {
-                                LOG_WARN("Simulator: ignoring ACK for seq=%u (DROP_ACK_SEQ)", seq);
+                                LOG_WARN("Simulator: DROP ACK seq=%u", seq);
                                 retries++;
                             }
                         }
                     }
                 }
             } else {
-                LOG_WARN("Timeout waiting for ACK, seq=%u", seq);
+                LOG_WARN("Timeout ACK seq=%u", seq);
                 retries++;
             }
         }
         if (acked) {
-            LOG_INFO("Message %d successfully delivered", i + 1);
+            LOG_INFO("Message %d OK", i + 1);
         } else {
-            LOG_WARN("Message %d failed after %d retries", i + 1, MAX_RETRIES);
+            LOG_WARN("Message %d FAILED", i + 1);
         }
         if (i < num_msgs - 1) {
             usleep(delay_ms * 1000);
         }
     }
-    LOG_INFO("All messages processed. Exiting...");
+    LOG_INFO("Done");
     close(sock);
     return 0;
 }

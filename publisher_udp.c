@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[]) {
     const char *host = DEFAULT_HOST;
-    int port = TCP_PORT;
+    int port = UDP_PORT;
     const char *topic = "PARTIDO_A";
     const char *pub_id = "PUB_1";
     int num_msgs = 10;
@@ -15,15 +15,16 @@ int main(int argc, char *argv[]) {
     if (argc > 5) num_msgs = atoi(argv[5]);
     if (argc > 6) delay_ms = atoi(argv[6]);
     
-    LOG_INFO("=== PUBLISHER TCP STARTED ===");
+    LOG_INFO("=== PUBLISHER UDP STARTED ===");
     LOG_INFO("Publisher ID: %s | Topic: %s | Messages: %d", pub_id, topic, num_msgs);
     
-    int sock = connect_tcp_client(host, port);
+    int sock = make_udp_client_socket();
     if (sock < 0) {
-        LOG_ERR("Failed to connect to broker at %s:%d", host, port);
+        LOG_ERR("Failed to create UDP socket");
         exit(1);
     }
-    LOG_INFO("Connected to broker at %s:%d", host, port);
+    struct sockaddr_in broker_addr = make_remote_addr(host, port);
+    LOG_INFO("Target: %s:%d", host, port);
     
     const char *events[] = {
         "Gol de equipo A al minuto 12",
@@ -41,9 +42,11 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < num_msgs && i < 10; i++) {
         char msg[MAX_BUFFER];
         snprintf(msg, sizeof(msg), "PUBLISH|%s|[%s] %s", topic, pub_id, events[i]);
-        
-        if (send_line(sock, msg) < 0) {
+        int n = sendto(sock, msg, strlen(msg) + 1, 0,
+                       (struct sockaddr *)&broker_addr, sizeof(broker_addr));
+        if (n < 0) {
             LOG_ERR("Failed to send message %d", i + 1);
+            perror("sendto");
             break;
         }
         LOG_INFO("Sent message %d/%d: %s", i + 1, num_msgs, events[i]);
@@ -51,9 +54,7 @@ int main(int argc, char *argv[]) {
             usleep(delay_ms * 1000);
         }
     }
-    
-    LOG_INFO("All messages sent. Disconnecting...");
+    LOG_INFO("All messages sent. Exiting...");
     close(sock);
-    LOG_INFO("Publisher finished");
     return 0;
 }

@@ -2,9 +2,9 @@
 
 int main(int argc, char *argv[]) {
     const char *local_host = "0.0.0.0";
-    int local_port = 9100 + (rand() % 1000);
+    int local_port = 9000 + (rand() % 1000);
     const char *broker_host = DEFAULT_HOST;
-    int broker_port = HYBRID_PORT;
+    int broker_port = UDP_PORT;
     const char *topic = "PARTIDO_A";
     const char *sub_id = "SUB_1";
     
@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     if (argc > 5) topic = argv[5];
     if (argc > 6) sub_id = argv[6];
     
-    LOG_INFO("=== SUBSCRIBER HYBRID STARTED ===");
+    LOG_INFO("=== SUBSCRIBER UDP STARTED ===");
     LOG_INFO("Subscriber ID: %s | Topic: %s", sub_id, topic);
     LOG_INFO("Local port: %d | Broker: %s:%d", local_port, broker_host, broker_port);
     
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
         close(sock);
         exit(1);
     }
-    LOG_INFO("Socket bound to local port %d", local_port);
+    LOG_INFO("UDP socket bound to local port %d", local_port);
     struct sockaddr_in broker_addr = make_remote_addr(broker_host, broker_port);
     char subscribe_msg[MAX_BUFFER];
     snprintf(subscribe_msg, sizeof(subscribe_msg), "SUBSCRIBE|%s", topic);
@@ -49,7 +49,6 @@ int main(int argc, char *argv[]) {
     LOG_INFO("Waiting for events...");
     char buffer[MAX_BUFFER];
     int msg_count = 0;
-    uint32_t last_seq = 0;
     struct sockaddr_in remote_addr;
     socklen_t addr_len = sizeof(remote_addr);
     while (1) {
@@ -61,30 +60,9 @@ int main(int argc, char *argv[]) {
         }
         buffer[n] = '\0';
         msg_count++;
-        char cmd[64], seq_str[32], recv_topic[64], content[MAX_MSG_LEN];
-        if (split4(buffer, cmd, seq_str, recv_topic, content,
-                   sizeof(cmd), sizeof(seq_str), sizeof(recv_topic), sizeof(content)) >= 3) {
-            if (strcmp(cmd, "EVENT") == 0) {
-                uint32_t seq = atol(seq_str);
-                if (seq <= last_seq) {
-                    LOG_WARN("Received [%d] DUPLICATE or OUT OF ORDER seq=%u (last=%u): %s",
-                             msg_count, seq, last_seq, content);
-                } else if (seq != last_seq + 1 && last_seq > 0) {
-                    LOG_WARN("Received [%d] OUT OF ORDER seq=%u (expected %u): %s",
-                             msg_count, seq, last_seq + 1, content);
-                    last_seq = seq;
-                } else {
-                    LOG_INFO("Received [%d] seq=%u: %s", msg_count, seq, content);
-                    last_seq = seq;
-                }
-                char ack_msg[64];
-                snprintf(ack_msg, sizeof(ack_msg), "ACKSUB|%u", seq);
-                sendto(sock, ack_msg, strlen(ack_msg) + 1, 0,
-                       (struct sockaddr *)&remote_addr, sizeof(remote_addr));
-            }
-        }
+        LOG_INFO("Received [%d]: %s", msg_count, buffer);
     }
     close(sock);
-    LOG_INFO("Subscriber finished. Total messages: %d", msg_count);
+    LOG_INFO("Subscriber finished. Total messages received: %d", msg_count);
     return 0;
 }

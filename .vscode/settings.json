@@ -1,0 +1,7 @@
+{
+  "C_Cpp.default.configurationProvider": "ms-vscode.cpptools",
+  "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+  "C_Cpp.default.cStandard": "c99",
+  "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+  "C_Cpp.errorSquiggles": "disabled"
+}

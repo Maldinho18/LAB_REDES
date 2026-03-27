@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
             LOG_WARN("Message %d FAILED", i + 1);
         }
         if (i < num_msgs - 1) {
-            usleep(delay_ms * 1000);
+            sleep_ms(delay_ms);
         }
     }
     LOG_INFO("Done");

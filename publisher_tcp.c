@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
         }
         LOG_INFO("Sent message %d/%d: %s", i + 1, num_msgs, events[i]);
         if (i < num_msgs - 1) {
-            usleep(delay_ms * 1000);
+            sleep_ms(delay_ms);
         }
     }
     

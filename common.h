@@ -184,9 +184,27 @@ static inline int send_all(int sock, const char *data, size_t len) {
 }
 
 static inline int send_line(int sock, const char *msg) {
-    char buf[MAX_BUFFER];
-    snprintf(buf, sizeof(buf), "%s\n", msg);
-    return send_all(sock, buf, strlen(buf));
+    size_t msg_len = strlen(msg);
+    if (msg_len + 1 > MAX_BUFFER) {
+        errno = EMSGSIZE;
+        perror("send_line");
+        return -1;
+    }
+    if (send_all(sock, msg, msg_len) < 0) {
+        return -1;
+    }
+    return send_all(sock, "\n", 1);
+}
+
+static inline void sleep_ms(int delay_ms) {
+    if (delay_ms <= 0) {
+        return;
+    }
+    struct timespec req;
+    req.tv_sec = delay_ms / 1000;
+    req.tv_nsec = (long)(delay_ms % 1000) * 1000000L;
+    while (nanosleep(&req, &req) == -1 && errno == EINTR) {
+    }
 }
 
 static inline int recv_line(int sock, char *buf, size_t len) {

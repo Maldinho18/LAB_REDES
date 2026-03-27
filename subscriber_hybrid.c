@@ -27,7 +27,12 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in local_addr;
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sin_family = AF_INET;
-    local_addr.sin_addr.s_addr = INADDR_ANY;
+    if (strcmp(local_host, "0.0.0.0") == 0) {
+        local_addr.sin_addr.s_addr = INADDR_ANY;
+    } else if (inet_pton(AF_INET, local_host, &local_addr.sin_addr) <= 0) {
+        LOG_WARN("Invalid local_host '%s', falling back to 0.0.0.0", local_host);
+        local_addr.sin_addr.s_addr = INADDR_ANY;
+    }
     local_addr.sin_port = htons(local_port);
     if (bind(sock, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
         perror("bind");

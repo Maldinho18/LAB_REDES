@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
             LOG_WARN("Message %d failed after %d retries", i + 1, MAX_RETRIES);
         }
         if (i < num_msgs - 1) {
-            usleep(delay_ms * 1000);
+            sleep_ms(delay_ms);
         }
     }
     LOG_INFO("All messages processed. Exiting...");

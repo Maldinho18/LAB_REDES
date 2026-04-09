@@ -73,9 +73,8 @@ int main(int argc, char *argv[]) {
                     ack_buf[n] = '\0';
                     LOG_INFO("Ack: %s", ack_buf);
                     char cmd[32], ack_seq_str[32], status_str[32];
-                    char ack_extra[8];
-                    if (split4(ack_buf, cmd, ack_seq_str, status_str, ack_extra,
-                               sizeof(cmd), sizeof(ack_seq_str), sizeof(status_str), sizeof(ack_extra)) >= 3) {
+                    if (split3(ack_buf, cmd, ack_seq_str, status_str,
+                               sizeof(cmd), sizeof(ack_seq_str), sizeof(status_str)) >= 3) {
                         if (strcmp(cmd, "ACKPUB") == 0) {
                             uint32_t ack_seq = atol(ack_seq_str);
                             if (ack_seq == seq && ack_seq != (uint32_t)drop_ack_seq) {
